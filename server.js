@@ -16,7 +16,7 @@ app.listen ( process.env.PORT || 3001, ()=>{
 })
 
 async function scrape(){
-    let browser = await puppeteer.launch(),
+    let browser = await puppeteer.launch({ args: ['--no-sandbox'] }),
     page = await browser.newPage();
     await page.goto('https://sportsurge.net/#/groups/19' , {
         waitUntil: 'networkidle0',
