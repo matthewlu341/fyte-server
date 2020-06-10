@@ -64,7 +64,7 @@ async function scrape(){
         }
         return allStreams;
     }
-    await browser.close();
+    await browser.close(); //check this out
 }
 
 app.get('/', (req, res) => {
