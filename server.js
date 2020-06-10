@@ -86,6 +86,6 @@ app.get('/tweets', (req, res)=>{
 })
 
 app.get('/streams', (req,res) => {
-    scrape().then(response => {res.json(response)});
+    scrape().then(response => {res.status(200).json(response)});
 })
 
