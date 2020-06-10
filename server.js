@@ -33,8 +33,6 @@ async function scrape(){
         return ret;
     })
 
-    await browser.close();
-
     for (let stream of streams){
         let prop = await stream.getProperty('href');
         let href = await prop.jsonValue();
@@ -46,6 +44,7 @@ async function scrape(){
     hrefs = Array.from(set);
 
     if(hrefs.length === 0){
+        await browser.close();
         return ("No streams available, check back later.")
     } else{
         let allStreams = [],
@@ -64,6 +63,7 @@ async function scrape(){
                 data.shift();
             }
         }
+        await browser.close();
         return allStreams;
     }
 }
