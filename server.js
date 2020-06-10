@@ -33,6 +33,8 @@ async function scrape(){
         return ret;
     })
 
+    await browser.close();
+
     for (let stream of streams){
         let prop = await stream.getProperty('href');
         let href = await prop.jsonValue();
@@ -64,7 +66,6 @@ async function scrape(){
         }
         return allStreams;
     }
-    await browser.close(); //check this out
 }
 
 app.get('/', (req, res) => {
