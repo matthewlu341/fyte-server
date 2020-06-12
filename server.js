@@ -4,12 +4,16 @@ cors = require('cors'),
 path = require('path'),
 puppeteer = require('puppeteer'),
 forbidden = ['https://sportsurge.net/','https://policies.google.com/privacy', 'https://policies.google.com/terms', 'https://sportsurge.net/',
-                'https://sportsurge.net/#/login'];
+                'https://sportsurge.net/#/login'],
+morgan = require('morgan'),
+fetch = require('node-fetch')
+require('dotenv').config();
 
 app = express();
 app.use(express.static(path.join(__dirname, 'client/build')));
 app.use(bp.json());
 app.use(cors());
+app.use(morgan('tiny'))
 // process.env.PORT || 
 app.listen ( process.env.PORT || 3001, ()=>{
     console.log(`running`)
@@ -90,3 +94,24 @@ app.get('/streams', (req,res) => {
     scrape().then(response => {res.status(200).json(response)});
 })
 
+app.get('/youtube', (req,res) => {
+    fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=5&playlistId=UUvgfXK4nTYKudb0rFR6noLA&key=${process.env.GOOGLE_API_KEY}`)
+        .then(response=>response.json())
+        .then(data => {
+            res.json(data.items)
+        })
+})
+
+function notFound(req,res,next){
+    const error = new Error('not found');
+    res.status(404);
+    next(error);
+}
+function errorHandler(error,req,res,next){
+    res.status(res.statusCode || 500)
+    res.json({
+        message: error.message
+    })
+}
+app.use(notFound);
+app.use(errorHandler);
