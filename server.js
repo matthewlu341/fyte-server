@@ -6,7 +6,8 @@ puppeteer = require('puppeteer'),
 forbidden = ['https://sportsurge.net/','https://policies.google.com/privacy', 'https://policies.google.com/terms', 'https://sportsurge.net/',
                 'https://sportsurge.net/#/login'],
 morgan = require('morgan'),
-fetch = require('node-fetch')
+fetch = require('node-fetch'),
+{ Client } = require('pg');
 require('dotenv').config();
 
 app = express();
@@ -16,7 +17,14 @@ app.use(cors());
 app.use(morgan('tiny'))
 // process.env.PORT || 
 app.listen ( process.env.PORT || 3001, ()=>{
-    console.log(`running`)
+    console.log(`server running`)
+})
+
+let client = new Client({
+    user: 'postgres',
+    password: 'postgrespassword',
+    host: '127.0.0.1',
+    database: 'fyte'
 })
 
 async function scrape(){
@@ -101,6 +109,16 @@ app.get('/youtube', (req,res) => {
             res.json(data.items)
         })
 })
+
+app.post('/signup', (req,res) => {
+    client.connect()
+    .then(()=>console.log('db connected'))
+    .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${req.body.password}')`))
+    .then(results => res.json(results))
+
+    .catch(err=>console.log(err))
+    .finally(() => client.end())
+});
 
 function notFound(req,res,next){
     const error = new Error('not found');
