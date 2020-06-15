@@ -111,9 +111,10 @@ app.get('/youtube', (req,res) => {
 })
 
 app.post('/signup', (req,res) => {
+    console.log(req.body.user, req.body.pass)
     client.connect()
     .then(()=>console.log('db connected'))
-    .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${req.body.password}')`))
+    .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${req.body.pass}')`))
     .then(results => res.json(results))
 
     .catch(err=>console.log(err))
