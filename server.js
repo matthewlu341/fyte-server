@@ -9,6 +9,8 @@ morgan = require('morgan'),
 fetch = require('node-fetch'),
 { Client } = require('pg');
 require('dotenv').config();
+let bcrypt = require('bcryptjs'),
+saltRounds = 10;
 
 app = express();
 app.use(express.static(path.join(__dirname, 'client/build')));
@@ -20,17 +22,10 @@ app.listen ( process.env.PORT || 3001, ()=>{
     console.log(`server running`)
 })
 
-let client = new Client({
-    user: 'postgres',
-    password: 'postgrespassword',
-    host: '127.0.0.1',
-    database: 'fyte'
-})
-
 async function scrape(){
     let browser = await puppeteer.launch({ args: ['--no-sandbox'] }),
     page = await browser.newPage();
-    await page.goto('https://sportsurge.net/#/groups/19' , {
+    await page.goto('https://sportsurge.net/#/groups/4' , {
         waitUntil: 'networkidle0',
       });
 
@@ -111,15 +106,52 @@ app.get('/youtube', (req,res) => {
 })
 
 app.post('/signup', (req,res) => {
-    console.log(req.body.user, req.body.pass)
-    client.connect()
-    .then(()=>console.log('db connected'))
-    .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${req.body.pass}')`))
-    .then(results => res.json(results))
+    let client = new Client({
+        user: 'postgres',
+        password: 'postgrespassword',
+        host: '127.0.0.1',
+        database: 'fyte'
+    })
+    bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
+        // Store hash in password DB.
+        client.connect()
+        .then(()=>console.log('signup client connected'))
+            .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${hash}')`))
+                .then(results => res.json(results))
+                .catch(err=>res.json('user already exists'))
 
-    .catch(err=>console.log(err))
-    .finally(() => client.end())
+        .catch(err=>console.log(err))
+        .finally(() => client.end())
+    });
 });
+
+app.post('/signin', (req,res) => {
+    let client = new Client({
+        user: 'postgres',
+        password: 'postgrespassword',
+        host: '127.0.0.1',
+        database: 'fyte'
+    })
+    client.connect()
+        .then(()=> console.log('signin client connected'))
+        .then(()=>client.query(`SELECT * FROM users WHERE username = '${req.body.user}';`)) 
+        .then((results) => {
+            if(results.rowCount===1){ 
+                console.log(req.body.user, req.body.pass)
+                bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
+                    if(bcrypt.compareSync(req.body.pass, results.rows[0].password)){
+                        res.json('loggedIn') //User and pass are good
+                    } else{
+                        res.json('wrongPw') //Pass is wrong
+                    }
+                })
+            } else{
+                res.json('user not found') //User dne
+            }
+        })
+        .catch(err=>console.log(err))
+        .finally(()=>client.end())
+})
 
 function notFound(req,res,next){
     const error = new Error('not found');
