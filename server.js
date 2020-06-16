@@ -52,7 +52,7 @@ async function scrape(){
 
     if(hrefs.length === 0){
         await browser.close();
-        return ("No streams available, check back later.")
+        return ("none")
     } else{
         let allStreams = [],
         fields = ['link','name', 'res', 'fps', 'btr', 'lang', 'cov', 'comp', 'ads']
