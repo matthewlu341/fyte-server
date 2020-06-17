@@ -22,10 +22,10 @@ app.listen ( process.env.PORT || 3001, ()=>{
     console.log(`server running`)
 })
 
-async function scrape(){
+async function scrape(groupNo){
     let browser = await puppeteer.launch({ args: ['--no-sandbox'] }),
     page = await browser.newPage();
-    await page.goto('https://sportsurge.net/#/groups/19' , {
+    await page.goto(`https://sportsurge.net/#/groups/${groupNo}` , {
         waitUntil: 'networkidle0',
       });
 
@@ -93,8 +93,8 @@ app.get('/tweets', (req, res)=>{
         })
 })
 
-app.get('/streams', (req,res) => {
-    scrape().then(response => {res.status(200).json(response)});
+app.post('/streams', (req,res) => {
+    scrape(req.body.groupNo).then(response => {res.status(200).json(response)});
 })
 
 app.get('/youtube', (req,res) => {
@@ -107,11 +107,11 @@ app.get('/youtube', (req,res) => {
 
 app.post('/signup', (req,res) => {
     let client = new Client({
-        user: 'postgres',
-        password: 'postgrespassword',
-        host: '127.0.0.1',
-        database: 'fyte'
-    })
+        connectionString: process.env.DATABASE_URL,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
     bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
         // Store hash in password DB.
         client.connect()
@@ -127,17 +127,16 @@ app.post('/signup', (req,res) => {
 
 app.post('/signin', (req,res) => {
     let client = new Client({
-        user: 'postgres',
-        password: 'postgrespassword',
-        host: '127.0.0.1',
-        database: 'fyte'
-    })
+        connectionString: process.env.DATABASE_URL,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
     client.connect()
         .then(()=> console.log('signin client connected'))
         .then(()=>client.query(`SELECT * FROM users WHERE username = '${req.body.user}';`)) 
         .then((results) => {
             if(results.rowCount===1){ 
-                console.log(req.body.user, req.body.pass)
                 bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
                     if(bcrypt.compareSync(req.body.pass, results.rows[0].password)){
                         res.json('loggedIn') //User and pass are good
