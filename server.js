@@ -3,6 +3,7 @@ bp = require('body-parser'),
 cors = require('cors'),
 path = require('path'),
 puppeteer = require('puppeteer'),
+wtf = require('wtf_wikipedia'),
 forbidden = ['https://sportsurge.net/','https://policies.google.com/privacy', 'https://policies.google.com/terms', 'https://sportsurge.net/',
                 'https://sportsurge.net/#/login'],
 morgan = require('morgan'),
@@ -18,6 +19,7 @@ app.use(bp.json());
 app.use(cors());
 app.use(morgan('tiny'))
 // process.env.PORT || 
+
 app.listen ( process.env.PORT || 3001, ()=>{
     console.log(`server running`)
 })
@@ -73,6 +75,60 @@ async function scrape(groupNo){
         await browser.close();
         return allStreams;
     }
+}
+async function getFights(){
+    let doc = await wtf.fetch('List of ufc events')
+    let scheduled = doc.json().sections.filter(section => {
+        return (section.title==='Scheduled events')
+    })
+    let upcoming = scheduled[0].tables[0]
+    let next = upcoming[upcoming.length-1]
+
+    let doc2 = await wtf.fetch(next.Event.text)
+    let fightCard = doc2.json().sections.filter(section => {return section.title==='Fight card' || section.title==='Results'})
+    let fights = fightCard[0].templates;
+    for (let i=0;i<2;i++){
+        fights.shift();
+    }
+    fights.pop();
+
+    let fightObjs=[];
+    for (let fight of fights){
+        if(!fight.list[0].includes('Preliminary')){
+            fightObjs.push({division: fight.list[0], 
+                            f1: {name: fight.list[1], record: await getRecord(fight.list[1])}, 
+                            f2: {name:fight.list[3], record: await getRecord(fight.list[3])}  
+            })
+        }
+    }
+    return {name: next.Event.text, fights:fightObjs};
+}
+
+async function getRecord(fighter){
+    let doc = await wtf.fetch(fighter)
+    let sec;
+    if(doc){ //If there's some wiki page
+        sec = doc.json().sections.filter(section => {
+            return (section.title==='Mixed martial arts record') //Try to find the mma record section
+        })
+    } else{ //no wiki page
+        return('No record.')
+    }  
+     
+    if (sec.length>0){ //there is one
+         return(sec[0].templates[0].data[0].record)
+
+    } else{ //there isn't
+        let doc = await wtf.fetch(`${fighter} (fighter)`) //fetch the fighters name with the extra word
+        let sec = doc.json().sections.filter(section => {
+            return (section.title==='Mixed martial arts record') //Try to find the mma record section
+        })
+        if (sec){ //The fetch with extra word worked
+            return(sec[0].templates[0].data[0].record)
+        }
+    }
+    
+
 }
 
 app.get('/', (req, res) => {
@@ -150,6 +206,11 @@ app.post('/signin', (req,res) => {
         })
         .catch(err=>console.log(err))
         .finally(()=>client.end())
+})
+
+app.get('/nextevent', (req,res)=>{
+    getFights().then(response => res.json(response))
+
 })
 
 function notFound(req,res,next){
