@@ -114,21 +114,45 @@ async function getRecord(fighter){
     } else{ //no wiki page
         return('No record.')
     }  
-     
-    if (sec.length>0){ //there is one
-         return(sec[0].templates[0].data[0].record)
+    
+    if (sec.length>0){ //doc is the fighter's page
+            if(sec[0].templates[0].hasOwnProperty('data')){
+                return(sec[0].templates[0].data[0].record) //straight record
+            } else{
+                return methodsToString((sec[0].templates[0])) //methods record
+            }
 
-    } else{ //there isn't
+    } else{ //not a fighter page
         let doc = await wtf.fetch(`${fighter} (fighter)`) //fetch the fighters name with the extra word
-        let sec = doc.json().sections.filter(section => {
-            return (section.title==='Mixed martial arts record') //Try to find the mma record section
-        })
-        if (sec){ //The fetch with extra word worked
-            return(sec[0].templates[0].data[0].record)
+        let sec;
+        if(doc){
+            sec = doc.json().sections.filter(section => {
+                return (section.title==='Mixed martial arts record') //find the mma record section
+            })
+        }
+        if (sec.length > 0){
+            if(sec[0].templates[0].hasOwnProperty('data')){
+                return(sec[0].templates[0].data[0].record)
+            } else{
+                return methodsToString((sec[0].templates[0]))
+            }
+        } else{
+            return ('No record.')
         }
     }
-    
+}
 
+function methodsToString(methods){
+    delete methods.template;
+    let wins=0, losses =0;
+    for (let method in methods){
+        if(method.includes('wins')){
+            wins += parseInt(methods[method])
+        } else{
+            losses += parseInt(methods[method])
+        }
+    }
+    return `${wins}-${losses}`
 }
 
 app.get('/', (req, res) => {
