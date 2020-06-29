@@ -1,3 +1,5 @@
+const { image_search } = require('duckduckgo-images-api');
+
 let express = require('express'),
 bp = require('body-parser'),
 cors = require('cors'),
@@ -8,7 +10,6 @@ forbidden = ['https://sportsurge.net/','https://policies.google.com/privacy', 'h
                 'https://sportsurge.net/#/login'],
 morgan = require('morgan'),
 fetch = require('node-fetch'),
-Scraper = require('images-scraper'),
 { Client } = require('pg');
 require('dotenv').config();
 let bcrypt = require('bcryptjs'),
@@ -105,13 +106,8 @@ async function getFights(){
     return {name: next.Event.text, picture: await getEventPic(next.Event.text), fights:fightObjs};
 }
 async function getEventPic(event){
-    const google = new Scraper({
-        puppeteer: {
-          headless: true,
-        }
-      });
-    let results = await google.scrape(`${event} poster`, 1)
-    return results;
+    let results = await image_search({query: `${event} poster`, iterations: 1})
+    return( results[0].image);
 }
 
 app.get('/', (req, res) => {
