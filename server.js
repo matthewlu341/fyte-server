@@ -84,75 +84,24 @@ async function getFights(){
     let upcoming = scheduled[0].tables[0]
     let next = upcoming[upcoming.length-1]
 
-    let doc2 = await wtf.fetch(next.Event.text)
+    let doc2 = await wtf.fetch(next.Event.links[0].page)
     let fightCard = doc2.json().sections.filter(section => {return section.title==='Fight card' || section.title==='Results'})
     let fights = fightCard[0].templates;
     for (let i=0;i<2;i++){
         fights.shift();
     }
     fights.pop();
-
     let fightObjs=[];
     for (let fight of fights){
         if(!fight.list[0].includes('Preliminary')){
+        
             fightObjs.push({division: fight.list[0], 
-                            f1: {name: fight.list[1], record: await getRecord(fight.list[1])}, 
-                            f2: {name:fight.list[3], record: await getRecord(fight.list[3])}  
+                            f1: {name: fight.list[1]}, 
+                            f2: {name:fight.list[3]}  
             })
         }
     }
     return {name: next.Event.text, fights:fightObjs};
-}
-
-async function getRecord(fighter){
-    let doc = await wtf.fetch(fighter)
-    let sec;
-    if(doc){ //If there's some wiki page
-        sec = doc.json().sections.filter(section => {
-            return (section.title==='Mixed martial arts record') //Try to find the mma record section
-        })
-    } else{ //no wiki page
-        return('No record.')
-    }  
-    
-    if (sec.length>0){ //doc is the fighter's page
-            if(sec[0].templates[0].hasOwnProperty('data')){
-                return(sec[0].templates[0].data[0].record) //straight record
-            } else{
-                return methodsToString((sec[0].templates[0])) //methods record
-            }
-
-    } else{ //not a fighter page
-        let doc = await wtf.fetch(`${fighter} (fighter)`) //fetch the fighters name with the extra word
-        let sec;
-        if(doc){
-            sec = doc.json().sections.filter(section => {
-                return (section.title==='Mixed martial arts record') //find the mma record section
-            })
-        }
-        if (sec.length > 0){
-            if(sec[0].templates[0].hasOwnProperty('data')){
-                return(sec[0].templates[0].data[0].record)
-            } else{
-                return methodsToString((sec[0].templates[0]))
-            }
-        } else{
-            return ('No record.')
-        }
-    }
-}
-
-function methodsToString(methods){
-    delete methods.template;
-    let wins=0, losses =0;
-    for (let method in methods){
-        if(method.includes('wins')){
-            wins += parseInt(methods[method])
-        } else{
-            losses += parseInt(methods[method])
-        }
-    }
-    return `${wins}-${losses}`
 }
 
 app.get('/', (req, res) => {
