@@ -18,7 +18,7 @@
     "esm": "^3.2.25",
     "express": "^4.17.1",
     "gapi-script": "^1.0.2",
-    "mma": "^0.1.3",
+    "images-scraper": "^5.0.7",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.0",
     "node-postgres": "^0.6.0",
@@ -26,7 +26,6 @@
     "puppeteer": "^3.3.0",
     "search-engine-client": "^1.2.6",
     "twit": "^2.2.11",
-    "ufc": "^0.1.4",
     "user-instagram": "^2.0.8",
     "wtf_wikipedia": "^8.3.0"
   },

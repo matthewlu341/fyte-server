@@ -8,6 +8,7 @@ forbidden = ['https://sportsurge.net/','https://policies.google.com/privacy', 'h
                 'https://sportsurge.net/#/login'],
 morgan = require('morgan'),
 fetch = require('node-fetch'),
+Scraper = require('images-scraper'),
 { Client } = require('pg');
 require('dotenv').config();
 let bcrypt = require('bcryptjs'),
@@ -101,7 +102,16 @@ async function getFights(){
             })
         }
     }
-    return {name: next.Event.text, fights:fightObjs};
+    return {name: next.Event.text, picture: await getEventPic(next.Event.text), fights:fightObjs};
+}
+async function getEventPic(event){
+    const google = new Scraper({
+        puppeteer: {
+          headless: true,
+        }
+      });
+    let results = await google.scrape(`${event} poster`, 1)
+    return results;
 }
 
 app.get('/', (req, res) => {
