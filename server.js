@@ -98,8 +98,8 @@ async function getFights(){
         if(!fight.list[0].includes('Preliminary')){
         
             fightObjs.push({division: fight.list[0], 
-                            f1: {name: fight.list[1]}, 
-                            f2: {name:fight.list[3]}  
+                            f1: {name: fight.list[1], picture: await getFighterPic(fight.list[1])}, 
+                            f2: {name:fight.list[3], picture: await getFighterPic(fight.list[3])}  
             })
         }
     }
@@ -107,6 +107,10 @@ async function getFights(){
 }
 async function getEventPic(event){
     let results = await image_search({query: `${event} poster`, iterations: 1})
+    return( results[0].image);
+}
+async function getFighterPic(fighter){
+    let results = await image_search({query: `${fighter} ufc profile`, iterations: 1})
     return( results[0].image);
 }
 
@@ -150,7 +154,6 @@ app.post('/signup', (req,res) => {
     bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
         // Store hash in password DB.
         client.connect()
-        .then(()=>console.log('signup client connected'))
             .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${hash}')`))
                 .then(results => res.json(results))
                 .catch(err=>res.json('user already exists'))
@@ -168,7 +171,6 @@ app.post('/signin', (req,res) => {
         }
       });
     client.connect()
-        .then(()=> console.log('signin client connected'))
         .then(()=>client.query(`SELECT * FROM users WHERE username = '${req.body.user}';`)) 
         .then((results) => {
             if(results.rowCount===1){ 
@@ -190,6 +192,39 @@ app.post('/signin', (req,res) => {
 app.get('/nextevent', (req,res)=>{
     getFights().then(response => res.json(response))
 
+})
+
+app.post('/placebets', (req,res) => {
+    let eventName = req.body.eventName,
+    picks = req.body.picks,
+    user = req.body.user;
+    let client = new Client({
+        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        ssl: {
+          rejectUnauthorized: false
+        }
+    });
+    client.connect()
+        .then(()=> client.query(`UPDATE users SET last_event='${eventName}', picks='{${picks}}', total = total + ${picks.length} 
+        WHERE username='${user}'`))
+        .catch(err=>console.log(err))
+        .finally(() => client.end())
+
+})
+
+app.post('/hasuserbet', (req,res) => {
+    let user = req.body.user;
+    let client = new Client({
+        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        ssl: {
+          rejectUnauthorized: false
+        }
+    });
+    return client.connect()
+        .then(()=>client.query(`SELECT * FROM users where username='${user}'`))
+        .then(data=>res.json(data.rows[0].picks))
+        .catch(err=>console.log(err))
+        .finally(() => client.end())
 })
 
 function notFound(req,res,next){
