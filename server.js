@@ -103,11 +103,50 @@ async function getFights(){
             })
         }
     }
-    return {name: next.Event.text, picture: await getEventPic(next.Event.text), fights:fightObjs};
+    return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs};
 }
 async function getEventPic(event){
     let results = await image_search({query: `${event} poster`, iterations: 1})
     return( results[0].image);
+}
+function monthToNumber(month){
+    let months = {
+        'January': 0,
+        'February': 1,
+        'March': 2,
+        'April': 3,
+        'May': 4,
+        'June': 5,
+        'July': 6,
+        'August': 7,
+        'September': 8,
+        'October': 9,
+        'November': 10,
+        'December': 11
+    }
+    for (let key of Object.keys(months)){
+        if (key.includes(month)){
+            return months[key];
+        }
+    }
+}
+function currentDateToObject(currentDate){
+    let day, month,  year;
+    let temp = currentDate.split(' ');
+    month = monthToNumber(temp[1]);
+    day = parseInt(temp[2], 10);
+    year = parseInt(temp[3], 10);
+    return new Date(year, month, day)
+
+}
+function eventDateToObject(eventDate){
+    let tempString = eventDate.replace(',', '');
+    let temp =  tempString.split(' ');
+    month = monthToNumber(temp[0]);
+    day = parseInt(temp[1], 10);
+    year = parseInt(temp[2], 10);
+    return new Date(year, month, day)
+
 }
 
 app.get('/', (req, res) => {
@@ -195,11 +234,12 @@ app.post('/placebets', (req,res) => {
     picks = req.body.picks,
     user = req.body.user;
     let client = new Client({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
         ssl: {
           rejectUnauthorized: false
         }
     });
+    console.log(user, eventName, picks)
     client.connect()
         .then(()=> client.query(`UPDATE users SET last_event='${eventName}', picks='{${picks}}', total = total + ${picks.length} 
         WHERE username='${user}'`))
@@ -222,6 +262,49 @@ app.post('/hasuserbet', (req,res) => {
         .then(data=>res.json(data.rows[0].picks))
         .catch(err=>console.log(err))
         .finally(() => client.end())
+})
+
+app.post('/comparebets', (req,res) => {
+    let currentDate = req.body.currentDate, user= req.body.user, lastEvent; //curent date from frontend
+    let client = new Client({
+        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        ssl: {
+          rejectUnauthorized: false
+        }
+    });
+    client.connect() //Get the user's last event
+        .then(()=>client.query(`SELECT last_event FROM users where username='${user}'`))
+        .then(data=>{
+            lastEvent = data.rows[0].last_event;
+            if(lastEvent){
+                wtf.fetch(lastEvent)
+                    .then(eventPage=>{
+                        let eventDate = eventPage.json().sections[0].infoboxes[0].date.text; //get event date from db
+                        let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
+                        if (daysAfterEvent<0){
+                            res.json(`${lastEvent} is happening in ${daysAfterEvent*-1} days.`)
+                        } if (daysAfterEvent===0){
+                            res.json(`${lastEvent} is happening today.`)
+                        } if (daysAfterEvent===1){
+                            res.json(`Your bets will be registered tomorrow.`)
+                        } if (daysAfterEvent>=2){
+                            client.query(`SELECT picks from USERS where username='${user}'`)
+                                .then(data=>{
+                                    let dbPicks = data.rows[0].picks;
+                                    let eventWinners = eventPage.json().sections.filter(section => section.title==='Results')[0].templates
+                                                        .filter(template=> template.template==='mmaevent bout')
+                                                        .map(fight => fight.list[1])
+                                    let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter))
+                                    console.log(dbPicks, eventWinners, correctPicks)
+                                    res.json(correctPicks)        
+                            })
+                        }
+                        
+                    })
+            } else{
+                res.json('last event null')
+            }
+        })
 })
 
 function notFound(req,res,next){
