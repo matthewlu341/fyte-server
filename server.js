@@ -295,8 +295,7 @@ app.post('/comparebets', (req,res) => {
                                                         .filter(template=> template.template==='mmaevent bout')
                                                         .map(fight => fight.list[1])
                                     let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter))
-                                    console.log(dbPicks, eventWinners, correctPicks)
-                                    res.json(correctPicks)        
+                                    res.json(correctPicks.length)        
                             })
                         }
                         
