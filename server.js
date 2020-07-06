@@ -85,8 +85,16 @@ async function getFights(){
     })
     let upcoming = scheduled[0].tables[0]
     let next = upcoming[upcoming.length-1]
+    
 
     let doc2 = await wtf.fetch(next.Event.links[0].page)
+    let eventDate = doc2.json().sections[0].infoboxes[0].date.text; //get event date 
+    let currentDate = new Date().toDateString();
+    let daysUntilEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
+    if (daysUntilEvent<0){
+        daysUntilEvent = daysUntilEvent*-1;
+    }
+                        
     let fightCard = doc2.json().sections.filter(section => {return section.title==='Fight card' || section.title==='Results'})
     let fights = fightCard[0].templates;
     for (let i=0;i<2;i++){
@@ -103,7 +111,7 @@ async function getFights(){
             })
         }
     }
-    return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs};
+    return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs, countdown: daysUntilEvent};
 }
 async function getEventPic(event){
     let results = await image_search({query: `${event} poster`, iterations: 1})
@@ -200,7 +208,7 @@ app.post('/signup', (req,res) => {
 
 app.post('/signin', (req,res) => {
     let client = new Client({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
         ssl: {
           rejectUnauthorized: false
         }
@@ -281,22 +289,22 @@ app.post('/comparebets', (req,res) => {
                     .then(eventPage=>{
                         let eventDate = eventPage.json().sections[0].infoboxes[0].date.text; //get event date from db
                         let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
-                        if (daysAfterEvent<0){
-                            res.json(`${lastEvent} is happening in ${daysAfterEvent*-1} days.`)
-                        } if (daysAfterEvent===0){
-                            res.json(`${lastEvent} is happening today.`)
-                        } if (daysAfterEvent===1){
-                            res.json(`Your bets will be registered tomorrow.`)
-                        } if (daysAfterEvent>=2){
+                        if (daysAfterEvent>=2){
                             client.query(`SELECT picks from USERS where username='${user}'`)
                                 .then(data=>{
-                                    let dbPicks = data.rows[0].picks;
+                                    let dbPicks = data.rows[0].picks; //picks in user db
+
                                     let eventWinners = eventPage.json().sections.filter(section => section.title==='Results')[0].templates
                                                         .filter(template=> template.template==='mmaevent bout')
-                                                        .map(fight => fight.list[1])
-                                    let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter))
-                                    res.json(correctPicks.length)        
+                                                        .map(fight => fight.list[1]) //event winners
+                                    let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter)) //create correct pick array
+
+                                    client.query(`UPDATE users SET correct = correct + ${correctPicks.length} WHERE username='${user}'`) //increment correct picks
+                                    client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`) // clear last event and picks  
+                                    res.json('success')    
                             })
+                        } else{
+                            res.json('event hasnt happened yet')
                         }
                         
                     })
@@ -304,6 +312,21 @@ app.post('/comparebets', (req,res) => {
                 res.json('last event null')
             }
         })
+})
+
+app.post('/getscore', (req,res) => {
+    let user = req.body.user;
+    let client = new Client({
+        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        ssl: {
+          rejectUnauthorized: false
+        }
+    });
+    client.connect()
+        .then(()=>client.query(`SELECT correct, total from users where username='${user}'`))
+            .then(data=>res.json({correct:data.rows[0].correct, total: data.rows[0].total}))
+        .catch(err=>console.log(err))
+        .finally(()=>client.end())
 })
 
 function notFound(req,res,next){
