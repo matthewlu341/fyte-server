@@ -85,6 +85,13 @@ async function getFights(){
     })
     let upcoming = scheduled[0].tables[0]
     let next = upcoming[upcoming.length-1]
+
+    //seeing how it works with previous events:
+    // let scheduled = doc.json().sections.filter(section => { 
+    //     return (section.title==='Past events')
+    // })
+    // let upcoming = scheduled[0].tables[0]
+    // let next = upcoming[0]
     
 
     let doc2 = await wtf.fetch(next.Event.links[0].page)
@@ -208,7 +215,7 @@ app.post('/signup', (req,res) => {
 
 app.post('/signin', (req,res) => {
     let client = new Client({
-        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        connectionString: PROCESS.ENV.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
@@ -242,7 +249,7 @@ app.post('/placebets', (req,res) => {
     picks = req.body.picks,
     user = req.body.user;
     let client = new Client({
-        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        connectionString: PROCESS.ENV.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
@@ -275,7 +282,7 @@ app.post('/hasuserbet', (req,res) => {
 app.post('/comparebets', (req,res) => {
     let currentDate = req.body.currentDate, user= req.body.user, lastEvent; //curent date from frontend
     let client = new Client({
-        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        connectionString: PROCESS.ENV.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
@@ -317,7 +324,7 @@ app.post('/comparebets', (req,res) => {
 app.post('/getscore', (req,res) => {
     let user = req.body.user;
     let client = new Client({
-        connectionString: 'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
+        connectionString: PROCESS.ENV.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
