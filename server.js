@@ -215,7 +215,7 @@ app.post('/signup', (req,res) => {
 
 app.post('/signin', (req,res) => {
     let client = new Client({
-        connectionString: PROCESS.ENV.DATABASE_URL,
+        connectionString: process.env.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
@@ -249,7 +249,7 @@ app.post('/placebets', (req,res) => {
     picks = req.body.picks,
     user = req.body.user;
     let client = new Client({
-        connectionString: PROCESS.ENV.DATABASE_URL,
+        connectionString: process.env.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
@@ -282,7 +282,7 @@ app.post('/hasuserbet', (req,res) => {
 app.post('/comparebets', (req,res) => {
     let currentDate = req.body.currentDate, user= req.body.user, lastEvent; //curent date from frontend
     let client = new Client({
-        connectionString: PROCESS.ENV.DATABASE_URL,
+        connectionString: process.env.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
@@ -324,7 +324,7 @@ app.post('/comparebets', (req,res) => {
 app.post('/getscore', (req,res) => {
     let user = req.body.user;
     let client = new Client({
-        connectionString: PROCESS.ENV.DATABASE_URL,
+        connectionString: process.env.DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
         }
