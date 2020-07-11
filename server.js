@@ -29,7 +29,7 @@ app.listen ( process.env.PORT || 3001, ()=>{
 async function scrape(groupNo){
     let browser = await puppeteer.launch({ args: ['--no-sandbox'] }),
     page = await browser.newPage();
-    await page.goto(`https://sportsurge.net/#/groups/${groupNo}` , {
+    await page.goto(`https://sportsurge.net/#/streamlist/${groupNo}` , {
         waitUntil: 'networkidle0',
       });
 
@@ -119,6 +119,7 @@ async function getFights(){
             })
         }
     }
+    console.log(daysUntilEvent)
     return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs, countdown: daysUntilEvent};
 }
 async function getEventPic(event){
