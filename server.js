@@ -101,6 +101,7 @@ async function getFights(){
     if (daysUntilEvent<0){
         daysUntilEvent = daysUntilEvent*-1;
     }
+    console.log(daysUntilEvent)
                         
     let fightCard = doc2.json().sections.filter(section => {return section.title==='Fight card' || section.title==='Results'})
     let fights = fightCard[0].templates;
@@ -349,3 +350,5 @@ function errorHandler(error,req,res,next){
 }
 app.use(notFound);
 app.use(errorHandler);
+
+getFights();
