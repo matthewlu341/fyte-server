@@ -26,58 +26,6 @@ app.listen ( process.env.PORT || 3001, ()=>{
     console.log(`server running`)
 })
 
-async function scrape(groupNo){
-    let browser = await puppeteer.launch({ args: ['--no-sandbox'] }),
-    page = await browser.newPage();
-    await page.goto(`https://sportsurge.net/#/streamlist/${groupNo}` , {
-        waitUntil: 'networkidle0',
-      });
-
-    let streams = await page.$$('a[href]'),
-    hrefs = [];
-
-    let data = await page.$$eval('td', cells => { 
-        let ret = [];
-        for (let cell of cells){
-            ret.push(cell.textContent)
-        }
-        return ret;
-    })
-
-    for (let stream of streams){
-        let prop = await stream.getProperty('href');
-        let href = await prop.jsonValue();
-        hrefs.push(href);
-    }
-   
-    hrefs = hrefs.filter(href => !forbidden.includes(href))
-    let set = new Set(hrefs);
-    hrefs = Array.from(set);
-
-    if(hrefs.length === 0){
-        await browser.close();
-        return ("none")
-    } else{
-        let allStreams = [],
-        fields = ['link','name', 'res', 'fps', 'btr', 'lang', 'cov', 'comp', 'ads']
-        for (let link of hrefs){
-            let stream = {};
-            for (let i=0; i<fields.length; i++){
-                if (i===0){
-                    stream[fields[i]] = link;
-                } else {
-                    stream[fields[i]] = data[i-1];
-                }
-            }
-            allStreams.push(stream)
-            for (let i=0; i<11; i++){
-                data.shift();
-            }
-        }
-        await browser.close();
-        return allStreams;
-    }
-}
 async function getFights(){
     let doc = await wtf.fetch('List of ufc events')
     let scheduled = doc.json().sections.filter(section => {
@@ -182,10 +130,6 @@ app.get('/tweets', (req, res)=>{
         var data = T.get('statuses/user_timeline', { user_id: '	6446742' }, (err,data,response) => {
             res.status(200).json(data)
         })
-})
-
-app.post('/streams', (req,res) => {
-    scrape(req.body.groupNo).then(response => {res.status(200).json(response)});
 })
 
 app.get('/youtube', (req,res) => {
@@ -321,6 +265,8 @@ app.post('/comparebets', (req,res) => {
                 res.json('last event null')
             }
         })
+        .catch(err=>console.log(err))
+        .finally(()=>client.end())
 })
 
 app.post('/getscore', (req,res) => {
@@ -338,8 +284,9 @@ app.post('/getscore', (req,res) => {
         .finally(()=>client.end())
 })
 
-app.get('/news', (req,res) => {
-    fetch('https://newsapi.org/v2/everything?qInTitle=ufc&sortBy=publishedAt&language=en&apiKey=e301f489d355427484f27ea2286dceb0')
+app.post('/news', (req,res) => {
+    let sortArg = req.body.sortArg;
+    fetch(`https://newsapi.org/v2/everything?qInTitle=ufc&sortBy=${sortArg}&language=en&apiKey=${process.env.NEWS_KEY}`)
         .then(response=>response.json())
         .then(news=>res.json(news))
 })
@@ -357,5 +304,3 @@ function errorHandler(error,req,res,next){
 }
 app.use(notFound);
 app.use(errorHandler);
-
-getFights();
