@@ -338,6 +338,12 @@ app.post('/getscore', (req,res) => {
         .finally(()=>client.end())
 })
 
+app.get('/news', (req,res) => {
+    fetch('https://newsapi.org/v2/everything?q=ufc&apiKey=e301f489d355427484f27ea2286dceb0')
+        .then(response=>response.json())
+        .then(news=>res.json(news))
+})
+
 function notFound(req,res,next){
     const error = new Error('not found');
     res.status(404);
