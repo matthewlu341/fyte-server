@@ -339,7 +339,7 @@ app.post('/getscore', (req,res) => {
 })
 
 app.get('/news', (req,res) => {
-    fetch('https://newsapi.org/v2/everything?q=ufc&apiKey=e301f489d355427484f27ea2286dceb0')
+    fetch('https://newsapi.org/v2/everything?qInTitle=ufc&sortBy=publishedAt&language=en&apiKey=e301f489d355427484f27ea2286dceb0')
         .then(response=>response.json())
         .then(news=>res.json(news))
 })
