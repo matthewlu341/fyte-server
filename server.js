@@ -71,7 +71,7 @@ async function getFights(){
     return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs, countdown: daysUntilEvent};
 }
 async function getEventPic(event){
-    let results = await image_search({query: `${event} poster`, iterations: 1})
+    let results = await image_search({query: `${event} wikipedia poster`, iterations: 1})
     return( results[0].image);
 }
 function monthToNumber(month){
@@ -304,3 +304,6 @@ function errorHandler(error,req,res,next){
 }
 app.use(notFound);
 app.use(errorHandler);
+
+getEventPic('UFC on ESPN: Kattar vs. Ige')
+.then(url=>console.log(url))
