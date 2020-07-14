@@ -228,7 +228,7 @@ app.post('/hasuserbet', (req,res) => {
 app.post('/comparebets', (req,res) => {
     let currentDate = req.body.currentDate, user= req.body.user, lastEvent; //curent date from frontend
     let client = new Client({
-        connectionString: process.env.DATABASE_URL,
+        connectionString:'postgres://qsbsllcuzppocd:d8c55555f7f36940d6e42a9ab40be9efe6ead113641edc82e8005b72fe8e2546@ec2-52-70-15-120.compute-1.amazonaws.com:5432/d8hmr511qd90ev',
         ssl: {
           rejectUnauthorized: false
         }
@@ -242,6 +242,7 @@ app.post('/comparebets', (req,res) => {
                     .then(eventPage=>{
                         let eventDate = eventPage.json().sections[0].infoboxes[0].date.text; //get event date from db
                         let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
+                        console.log(daysAfterEvent)
                         if (daysAfterEvent>=2){
                             client.query(`SELECT picks from USERS where username='${user}'`)
                                 .then(data=>{
@@ -257,7 +258,7 @@ app.post('/comparebets', (req,res) => {
                                     res.json('success')    
                             })
                         } else{
-                            res.json('event hasnt happened yet')
+                            res.json({eventDate: eventDate, currentDate: currentDate, daysAfterEvent: daysAfterEvent})
                         }
                         
                     })
