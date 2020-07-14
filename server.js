@@ -1,26 +1,28 @@
 const { image_search } = require('duckduckgo-images-api');
-
 let express = require('express'),
 bp = require('body-parser'),
 cors = require('cors'),
 path = require('path'),
-puppeteer = require('puppeteer'),
 wtf = require('wtf_wikipedia'),
-forbidden = ['https://sportsurge.net/','https://policies.google.com/privacy', 'https://policies.google.com/terms', 'https://sportsurge.net/',
-                'https://sportsurge.net/#/login'],
 morgan = require('morgan'),
 fetch = require('node-fetch'),
-{ Client } = require('pg');
+{ Pool } = require('pg');
 require('dotenv').config();
 let bcrypt = require('bcryptjs'),
 saltRounds = 10;
-
 app = express();
 app.use(express.static(path.join(__dirname, 'client/build')));
 app.use(bp.json());
 app.use(cors());
 app.use(morgan('tiny'))
-// process.env.PORT || 
+let pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    max: 20
+  });
+
 
 app.listen ( process.env.PORT || 3001, ()=>{
     console.log(`server running`)
@@ -140,89 +142,119 @@ app.get('/youtube', (req,res) => {
         })
 })
 
-app.post('/signup', (req,res) => {
-    let client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: false
-        }
-      });
-    bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
-        // Store hash in password DB.
-        client.connect()
-            .then(()=> client.query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${hash}')`))
-                .then(results => res.json(results))
-                .catch(err=>res.json('user already exists'))
-
-        .catch(err=>console.log(err))
-        .finally(() => client.end())
-    });
-});
-
-app.post('/signin', (req,res) => {
-    let client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: false
-        }
-      });
-    client.connect()
-        .then(()=>client.query(`SELECT * FROM users WHERE username = '${req.body.user}';`)) 
-        .then((results) => {
-            if(results.rowCount===1){ 
-                bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
-                    if(bcrypt.compareSync(req.body.pass, results.rows[0].password)){
-                        res.json('loggedIn') //User and pass are good
-                    } else{
-                        res.json('wrongPw') //Pass is wrong
-                    }
-                })
-            } else{
-                res.json('user not found') //User dne
-            }
-        })
-        .catch(err=>console.log(err))
-        .finally(()=>client.end())
-})
-
 app.get('/nextevent', (req,res)=>{
     getFights().then(response => res.json(response))
 
 })
 
-app.post('/placebets', (req,res) => {
-    let eventName = req.body.eventName,
-    picks = req.body.picks,
-    user = req.body.user;
-    let client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: false
-        }
-    });
-    console.log(user, eventName, picks)
-    client.connect()
-        .then(()=> client.query(`UPDATE users SET last_event='${eventName}', picks='{${picks}}', total = total + ${picks.length} 
-        WHERE username='${user}'`))
-        .then((data)=>res.json(data))
-        .catch(err=>console.log(err))
-        .finally(() => client.end())
+app.post('/news', (req,res) => {
+    let sortArg = req.body.sortArg;
+    fetch(`https://newsapi.org/v2/everything?qInTitle=ufc&sortBy=${sortArg}&language=en&apiKey=${process.env.NEWS_KEY}`)
+        .then(response=>response.json())
+        .then(news=>res.json(news))
+})
 
+/*DATABASE STUFF*/
+
+app.post('/signup', (req,res) => {
+    bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
+        pool.connect()
+            .then(client => {
+                return client
+                .query(`INSERT INTO users (username, password) VALUES ('${req.body.user}', '${hash}')`)
+                .then(result => {
+                    res.json(result)
+                    client.release()
+                })
+                .catch(err => {
+                    res.json('user already exists')
+                    client.release()
+                })
+            })
+            .catch(error=>console.log(error))
+    });
+});
+
+app.post('/signin', (req,res) => {
+    pool.connect()
+        .then( client => {
+            return client
+            .query(`SELECT * FROM users WHERE username = '${req.body.user}';`)
+                .then((results) => {
+                    if(results.rowCount===1){ 
+                        bcrypt.hash(req.body.pass, saltRounds, function(err, hash) {
+                            if(bcrypt.compareSync(req.body.pass, results.rows[0].password)){
+                                res.json('loggedIn') //User and pass are good
+                                client.release();
+                            } else{
+                                res.json('wrongPw') //Pass is wrong
+                                client.release();
+                            }
+                        })
+                    } else{
+                        res.json('user not found') //User dne
+                        client.release();
+                    }
+                })
+                .catch(err=> {
+                    console.log(err);
+                    client.release();
+                })
+        }) 
+        .catch(err=>console.log(err))
+})
+
+app.post('/placebets', (req,res) => {
+    let eventName = req.body.eventName, picks = req.body.picks, user = req.body.user;
+    pool.connect()
+        .then((client)=> {
+             return client
+             .query(`UPDATE users SET last_event='${eventName}', picks='{${picks}}', total = total + ${picks.length} 
+                WHERE username='${user}'`)
+                .then((data)=>{
+                    res.json(data)
+                    client.release();
+                })
+                .catch(err=>{
+                    console.log(err)
+                    client.release();
+                })
+        })
+        .catch(err=>console.log(err))
 })
 
 app.post('/hasuserbet', (req,res) => {
     let user = req.body.user;
-    let client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: false
-        }
-    });
-    return client.connect()
-        .then(()=>client.query(`SELECT * FROM users where username='${user}'`))
-        .then(data=>res.json(data.rows[0].picks))
-        .catch(err=>console.log(err))
-        .finally(() => client.end())
+    return pool.connect()
+        .then((client)=> {
+            return client.query(`SELECT * FROM users where username='${user}'`)
+                .then(data=>{
+                    res.json(data.rows[0].picks)
+                    client.release();
+                })
+                .catch(err=>{
+                    console.log(err)
+                    client.release();
+                })
+        })
+       .catch(err=>console.log(err))
+})
+
+app.post('/getscore', (req,res) => {
+    let user = req.body.user;
+    pool.connect()
+        .then((client)=>{
+            return client.query(`SELECT correct, total from users where username='${user}'`)
+                .then(data=>{
+                    res.json({correct:data.rows[0].correct, total: data.rows[0].total})
+                    client.release();
+                })
+                .catch(err=>{
+                    console.log(err)
+                    client.release();
+                })
+    })        
+        .catch((err)=>console.log(err))
 })
 
 app.post('/comparebets', (req,res) => {
@@ -244,14 +276,6 @@ app.post('/comparebets', (req,res) => {
                         let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
                         console.log(daysAfterEvent)
                         if (daysAfterEvent>=2){
-                            let client = new Client({
-                                connectionString: process.env.DATABASE_URL,
-                                ssl: {
-                                  rejectUnauthorized: false
-                                }
-                            });
-                            client.connect()
-                                .then(() => {
                                     client.query(`SELECT picks from USERS where username='${user}'`)
                                     .then(data=>{
                                         let dbPicks = data.rows[0].picks; //picks in user db
@@ -265,7 +289,7 @@ app.post('/comparebets', (req,res) => {
                                         client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`) // clear last event and picks  
                                         res.json('success')    
                                     })
-                                })
+                                
                                 .catch(error=>console.log(error))
                                 .finally(()=>client.end())
                             
@@ -282,28 +306,8 @@ app.post('/comparebets', (req,res) => {
         .finally(()=>client.end())
 })
 
-app.post('/getscore', (req,res) => {
-    let user = req.body.user;
-    let client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: false
-        }
-    });
-    client.connect()
-        .then(()=>client.query(`SELECT correct, total from users where username='${user}'`))
-            .then(data=>res.json({correct:data.rows[0].correct, total: data.rows[0].total}))
-        .catch(err=>console.log(err))
-        .finally(()=>client.end())
-})
 
-app.post('/news', (req,res) => {
-    let sortArg = req.body.sortArg;
-    fetch(`https://newsapi.org/v2/everything?qInTitle=ufc&sortBy=${sortArg}&language=en&apiKey=${process.env.NEWS_KEY}`)
-        .then(response=>response.json())
-        .then(news=>res.json(news))
-})
-
+/*--------------------------------------*/
 function notFound(req,res,next){
     const error = new Error('not found');
     res.status(404);
@@ -317,6 +321,3 @@ function errorHandler(error,req,res,next){
 }
 app.use(notFound);
 app.use(errorHandler);
-
-getEventPic('UFC on ESPN: Kattar vs. Ige')
-.then(url=>console.log(url))

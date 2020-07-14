@@ -23,7 +23,6 @@
     "node-fetch": "^2.6.0",
     "node-postgres": "^0.6.0",
     "pg": "^8.2.1",
-    "puppeteer": "^3.3.0",
     "search-engine-client": "^1.2.6",
     "twit": "^2.2.11",
     "user-instagram": "^2.0.8",
