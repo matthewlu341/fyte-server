@@ -244,19 +244,31 @@ app.post('/comparebets', (req,res) => {
                         let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
                         console.log(daysAfterEvent)
                         if (daysAfterEvent>=2){
-                            client.query(`SELECT picks from USERS where username='${user}'`)
-                                .then(data=>{
-                                    let dbPicks = data.rows[0].picks; //picks in user db
+                            let client = new Client({
+                                connectionString: process.env.DATABASE_URL,
+                                ssl: {
+                                  rejectUnauthorized: false
+                                }
+                            });
+                            client.connect()
+                                .then(() => {
+                                    client.query(`SELECT picks from USERS where username='${user}'`)
+                                    .then(data=>{
+                                        let dbPicks = data.rows[0].picks; //picks in user db
 
-                                    let eventWinners = eventPage.json().sections.filter(section => section.title==='Results')[0].templates
-                                                        .filter(template=> template.template==='mmaevent bout')
-                                                        .map(fight => fight.list[1]) //event winners
-                                    let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter)) //create correct pick array
+                                        let eventWinners = eventPage.json().sections.filter(section => section.title==='Results')[0].templates
+                                                            .filter(template=> template.template==='mmaevent bout')
+                                                            .map(fight => fight.list[1]) //event winners
+                                        let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter)) //create correct pick array
 
-                                    client.query(`UPDATE users SET correct = correct + ${correctPicks.length} WHERE username='${user}'`) //increment correct picks
-                                    client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`) // clear last event and picks  
-                                    res.json('success')    
-                            })
+                                        client.query(`UPDATE users SET correct = correct + ${correctPicks.length} WHERE username='${user}'`) //increment correct picks
+                                        client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`) // clear last event and picks  
+                                        res.json('success')    
+                                    })
+                                })
+                                .catch(error=>console.log(error))
+                                .finally(()=>client.end())
+                            
                         } else{
                             res.json({eventDate: eventDate, currentDate: currentDate, daysAfterEvent: daysAfterEvent})
                         }
