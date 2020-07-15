@@ -1,4 +1,3 @@
-const { image_search } = require('duckduckgo-images-api');
 let express = require('express'),
 bp = require('body-parser'),
 cors = require('cors'),
