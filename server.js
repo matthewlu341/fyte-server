@@ -73,8 +73,9 @@ async function getFights(){
     return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs, countdown: daysUntilEvent};
 }
 async function getEventPic(event){
-    let results = await image_search({query: `${event} wikipedia poster`, iterations: 1})
-    return( results[0].image);
+    let page = await wtf.fetch(event)
+    let url = await page.infoboxes()[0].image().url();;
+    return url;
 }
 function monthToNumber(month){
     let months = {
@@ -259,36 +260,41 @@ app.post('/getscore', (req,res) => {
 
 app.post('/comparebets', (req,res) => {
     let currentDate = req.body.currentDate, user= req.body.user, lastEvent; //curent date from frontend
-    pool.connect() //Get the user's last event
-        .then((client)=>client.query(`SELECT last_event FROM users where username='${user}'`)
+    pool.connect() 
+        .then((client)=>client.query(`SELECT last_event FROM users where username='${user}'`) //Get the user's last event
             .then(data=>{
                 lastEvent = data.rows[0].last_event;
                 if(lastEvent){
                     wtf.fetch(lastEvent)
                         .then(eventPage=>{
-                            let eventDate = eventPage.json().sections[0].infoboxes[0].date.text; //get event date from db
-                            let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
-                            if (daysAfterEvent>=2){
-                                        client.query(`SELECT picks from USERS where username='${user}'`)
-                                            .then(data=>{
-                                                let dbPicks = data.rows[0].picks; //picks in user db
+                            if(eventPage){ //If the wiki page exists
+                                let eventDate = eventPage.json().sections[0].infoboxes[0].date.text; //get event date from db
+                                let daysAfterEvent = (currentDateToObject(currentDate).getTime()-eventDateToObject(eventDate).getTime())/86400000;
+                                if (daysAfterEvent>=2){ //if 2 days have passed
+                                            client.query(`SELECT picks from USERS where username='${user}'`)
+                                                .then(data=>{
+                                                    let dbPicks = data.rows[0].picks; //picks in user db
 
-                                                let eventWinners = eventPage.json().sections.filter(section => section.title==='Results')[0].templates
-                                                                    .filter(template=> template.template==='mmaevent bout')
-                                                                    .map(fight => fight.list[1]) //event winners
-                                                let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter)) //create correct pick array
+                                                    let eventWinners = eventPage.json().sections.filter(section => section.title==='Results')[0].templates
+                                                                        .filter(template=> template.template==='mmaevent bout')
+                                                                        .map(fight => fight.list[1]) //event winners
+                                                    let correctPicks = eventWinners.filter(fighter => dbPicks.includes(fighter)) //create correct pick array
 
-                                                client.query(`UPDATE users SET correct = correct + ${correctPicks.length} WHERE username='${user}'`) //increment correct picks
-                                                    .then(()=>client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`)) // clear last event and picks  
-                                                res.json('success')    
-                                                client.release();
-                                            })
-                                            .catch(err=>console.log(err))  
+                                                    client.query(`UPDATE users SET correct = correct + ${correctPicks.length} WHERE username='${user}'`) //increment correct picks
+                                                        .then(()=>client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`)) // clear last event and picks  
+                                                    res.json('success')    
+                                                    client.release();
+                                                })
+                                                .catch(err=>console.log(err)) 
+
+                                } else{
+                                    res.json({eventDate: eventDate, currentDate: currentDate, daysAfterEvent: daysAfterEvent})
+                                    client.release();
+                                } 
                             } else{
-                                res.json({eventDate: eventDate, currentDate: currentDate, daysAfterEvent: daysAfterEvent})
-                                client.release();
+                                client.query(`UPDATE users set last_event=null, picks=null WHERE username='${user}'`)
+                                res.json('event not found, last event and picks cleared (the wikipedia name probably changed.)')
                             }
-                            
                         })
                 } else{
                     res.json('last event null')
