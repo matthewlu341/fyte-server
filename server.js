@@ -6,6 +6,7 @@ wtf = require('wtf_wikipedia'),
 morgan = require('morgan'),
 fetch = require('node-fetch'),
 { Pool } = require('pg');
+const { image_search } = require('duckduckgo-images-api');
 require('dotenv').config();
 let bcrypt = require('bcryptjs'),
 saltRounds = 10;
@@ -78,7 +79,9 @@ async function getEventPic(event){
         let url = await page.infoboxes()[0].image().url();
         return url;
     } else{
-        return 'https://sportshub.cbsistatic.com/i/r/2019/04/18/488106a4-d715-462b-884e-d80681484fc3/thumbnail/1200x675/5eaa2ec04a4a0700cf38bde6c6d22cb4/mmaoctagoncbs-1.jpg'
+        return image_search({query: `${event} wikipedia poster`})
+            .then(data=>{return data[0].image})
+            .catch(err=>{return 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fusatmmajunkie.files.wordpress.com%2F2014%2F05%2Fufc-octagon-brazil.jpg%3Fw%3D1000&f=1&nofb=1'})
     }
 }
 function monthToNumber(month){
