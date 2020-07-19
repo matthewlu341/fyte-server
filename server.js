@@ -73,8 +73,13 @@ async function getFights(){
 }
 async function getEventPic(event){
     let page = await wtf.fetch(event)
-    let url = await page.infoboxes()[0].image().url();;
-    return url;
+    let imgPromise = await page.infoboxes()[0].image();
+    if (imgPromise){
+        let url = await page.infoboxes()[0].image().url();
+        return url;
+    } else{
+        return 'https://sportshub.cbsistatic.com/i/r/2019/04/18/488106a4-d715-462b-884e-d80681484fc3/thumbnail/1200x675/5eaa2ec04a4a0700cf38bde6c6d22cb4/mmaoctagoncbs-1.jpg'
+    }
 }
 function monthToNumber(month){
     let months = {
