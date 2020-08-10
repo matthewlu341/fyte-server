@@ -51,7 +51,6 @@ async function getFights(){
     if (daysUntilEvent<0){
         daysUntilEvent = daysUntilEvent*-1;
     }
-    console.log(daysUntilEvent)
                         
     let fightCard = doc2.json().sections.filter(section => {return section.title==='Fight card' || section.title==='Results'})
     let fights = fightCard[0].templates;
@@ -70,11 +69,11 @@ async function getFights(){
         }
     }
     console.log(daysUntilEvent)
-    return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.text), fights:fightObjs, countdown: daysUntilEvent};
+    return {name: next.Event.links[0].page, picture: await getEventPic(next.Event.links[0].page), fights:fightObjs, countdown: daysUntilEvent};
 }
 async function getEventPic(event){
     let page = await wtf.fetch(event)
-    let imgPromise = await page.infoboxes()[0].image();
+    let imgPromise = await page.infoboxes();
     if (imgPromise){
         let url = await page.infoboxes()[0].image().url();
         return url;
