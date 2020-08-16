@@ -73,7 +73,7 @@ async function getFights(){
 }
 async function getEventPic(event){
     let page = await wtf.fetch(event)
-    let imgPromise = await page.infoboxes();
+    let imgPromise = await page.infoboxes()[0].image();
     if (imgPromise){
         let url = await page.infoboxes()[0].image().url();
         return url;
