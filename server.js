@@ -142,10 +142,9 @@ app.get('/tweets', (req, res)=>{
         })
 })
 
-app.get('/insta', (req, res) => {
-    let ufc = userInstagram("ufc")
-    .then(data => {res.status(200).json(data.posts)})
-    .catch(data => {res.status(400).json('error')})
+app.get('/instagram', (req, res) => {
+    userInstagram("ufc")
+    .then(data => console.log(data))
 
 
 })
