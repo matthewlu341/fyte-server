@@ -25,7 +25,7 @@
     "pg": "^8.2.1",
     "search-engine-client": "^1.2.6",
     "twit": "^2.2.11",
-    "user-instagram": "^2.0.8",
+    "user-instagram": "^2.1.9",
     "wtf_wikipedia": "^8.3.0"
   },
   "devDependencies": {

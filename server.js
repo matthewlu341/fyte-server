@@ -5,6 +5,7 @@ path = require('path'),
 wtf = require('wtf_wikipedia'),
 morgan = require('morgan'),
 fetch = require('node-fetch'),
+userInstagram = require("user-instagram"),
 { Pool } = require('pg');
 const { image_search } = require('duckduckgo-images-api');
 require('dotenv').config();
@@ -139,6 +140,14 @@ app.get('/tweets', (req, res)=>{
         var data = T.get('statuses/user_timeline', { user_id: '	6446742' }, (err,data,response) => {
             res.status(200).json(data)
         })
+})
+
+app.get('/insta', (req, res) => {
+    let ufc = userInstagram("ufc")
+    .then(data => {res.status(200).json(data.posts)})
+    .catch(data => {res.status(400).json('error')})
+
+
 })
 
 app.get('/youtube', (req,res) => {
