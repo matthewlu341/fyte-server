@@ -20,7 +20,7 @@
     "express": "^4.17.1",
     "gapi-script": "^1.0.2",
     "morgan": "^1.10.0",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.7",
     "node-postgres": "^0.6.0",
     "pg": "^8.2.1",
     "search-engine-client": "^1.2.6",
