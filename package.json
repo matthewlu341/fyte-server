@@ -17,7 +17,7 @@
     "dotenv": "^8.2.0",
     "duckduckgo-images-api": "^1.0.5",
     "esm": "^3.2.25",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "gapi-script": "^1.0.2",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.0",
